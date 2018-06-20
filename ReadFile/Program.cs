@@ -25,6 +25,7 @@ namespace ReadFile
             CNT,
             UNT,
             UNZ,
+            DTM,
             INV
         }
 
@@ -37,10 +38,10 @@ namespace ReadFile
 
         public enum DateConvertEnum
         {
-            [Description("yyMMdd")]
-            OneOTwoDate,
             [Description("yyyyMMdd")]
-            TwoOTwoDate
+            OneOTwoDate = 102,
+            [Description("yyyyMMdd")]
+            TwoOTwoDate = 202
         }
 
         public class TescoEDIFact : EDIFact01MessageStructure
@@ -117,6 +118,16 @@ namespace ReadFile
             public string TrailerControlReference { get; set; }
         }
 
+        public class CNTSegment : GenericSegments
+        {
+            public CNTSegment(string segmentIdentifier)
+            {
+                SegmentIdentifier = segmentIdentifier;
+            }
+            public int MessageSegmentsCount { get; set; }
+            public string MessageReference { get; set; }
+        }
+
         public class PIASegment : GenericSegments
         {
             public PIASegment(string segmentIdentifier)
@@ -125,6 +136,18 @@ namespace ReadFile
             }
             public string Code { get; set; }
             public string ItemCode { get; set; }
+        }
+
+        public class DTMSegment : GenericSegments
+        {
+            public DTMSegment(string segmentIdentifier)
+            {
+                SegmentIdentifier = segmentIdentifier;
+            }
+            public DateTime? DeliveryDate { get; set; }
+            public DateTime? MessageDate { get; set; }
+            public DateTime? ProcessingStartDate { get; set; }
+            public DateTime? ProcessingEndDate { get; set; }
         }
 
         public class UNTSegment : GenericSegments
@@ -203,13 +226,16 @@ namespace ReadFile
                             var newUNHSegment = ProcessUNHSegment(allLines[i]);
                             break;
                         case EDIFactSegmentEnum.BGM:
+                            var newBGMSegment = ProcessBGMSegment(allLines[i]);
                             break;
                         case EDIFactSegmentEnum.NAD:
                             var newNADSegment = ProcessNADSegment(allLines[i], new NADSegment("NAD"));
                             break;
                         case EDIFactSegmentEnum.LIN:
+                            var newLINSegment = ProcessLINSegment(allLines[i]);
                             break;
                         case EDIFactSegmentEnum.PIA:
+                            var newPIASegment = ProcessPIASegment(allLines[i]);
                             break;
                         case EDIFactSegmentEnum.IMD:
                             break;
@@ -277,12 +303,16 @@ namespace ReadFile
                         case EDIFactSegmentEnum.UNS:
                             break;
                         case EDIFactSegmentEnum.CNT:
+                            var newCNTSegment = ProcessCNTSegment(line);
                             break;
                         case EDIFactSegmentEnum.UNT:
                             var newUNTSegment = ProcessUNTSegment(line);
                             break;
                         case EDIFactSegmentEnum.UNZ:
                             var newUNZSegment = ProcessUNZSegment(line);
+                            break;
+                        case EDIFactSegmentEnum.DTM:
+                            var newDTMSegment = ProcessDTMSegment(line, new DTMSegment("DTM"));
                             break;
                         case EDIFactSegmentEnum.INV:
                             break;
@@ -363,6 +393,9 @@ namespace ReadFile
                     break;
                 case "UNT":
                     eDIFactSegmentEnum = EDIFactSegmentEnum.UNT;
+                    break;
+                case "DTM":
+                    eDIFactSegmentEnum = EDIFactSegmentEnum.DTM;
                     break;
                 case "UNZ":
                     eDIFactSegmentEnum = EDIFactSegmentEnum.UNZ;
@@ -515,6 +548,83 @@ namespace ReadFile
             return newUNBSegment;
         }
 
+        private static DTMSegment ProcessDTMSegment(string stringToConvert, DTMSegment existingDTMSegment)
+        {
+            DTMSegment newDTMSegment;
+            const int DTMSegmentCount = 3;
+
+            if (existingDTMSegment != null)
+            {
+                newDTMSegment = existingDTMSegment;
+            }
+            else
+            {
+                newDTMSegment = new DTMSegment("DTM");
+            }
+
+            var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
+
+            for (int j = 0; j < allSegments.Length; j++)
+            {
+                switch (j)
+                {
+                    case 1:
+
+                        var subParts = SplitStringBySeparator(allSegments[j], ColonSeparator);
+
+                        if (subParts.Length != DTMSegmentCount)
+                        {
+                            throw new Exception("Incorrect number of segments");
+                        }
+
+                        string dateValueToConvert = subParts[1];
+                        DateTime dtmDateTime;
+
+                        int result = 0;
+
+                        if (subParts[2].Contains("'"))
+                        {
+                            int.TryParse(subParts[2].Replace(SingleQuoteSeparator, ' '), out result);
+                        }
+                        else
+                        {
+                            int.TryParse(subParts[2], out result);
+                        }
+
+                        string enumPicture = string.Empty;
+
+                        if (result == (int)DateConvertEnum.OneOTwoDate)
+                        {
+                            enumPicture = Utilities.GetDescription(DateConvertEnum.OneOTwoDate);
+                        }
+
+                        if (result == (int)DateConvertEnum.TwoOTwoDate)
+                        {
+                            enumPicture = Utilities.GetDescription(DateConvertEnum.OneOTwoDate);
+                        }
+
+                        DateTime.TryParseExact(dateValueToConvert, enumPicture, CultureInfo.InvariantCulture, DateTimeStyles.None, out dtmDateTime);
+
+                        if (subParts[0] == "64")
+                        {
+                            newDTMSegment.DeliveryDate = dtmDateTime;
+                        }
+
+                        if (subParts[0] == "137")
+                        {
+                            newDTMSegment.MessageDate = dtmDateTime;
+                        }
+
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            return newDTMSegment;
+        }
+
         private static BGMSegment ProcessBGMSegment(string stringToConvert)
         {
             var newBGMSegment = new BGMSegment("BGM");
@@ -610,6 +720,42 @@ namespace ReadFile
             }
 
             return newPIASegment;
+        }
+        private static CNTSegment ProcessCNTSegment(string stringToConvert)
+        {
+            var newCNTSegment = new CNTSegment("CNT");
+
+            var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
+
+            for (int j = 0; j < allSegments.Length; j++)
+            {
+                switch (j)
+                {
+                    case 1:
+
+                        var subParts = SplitStringBySeparator(allSegments[j], ColonSeparator);
+
+                        int result = 2;
+
+                        if (subParts[1].Contains("'"))
+                        {
+                            int.TryParse(subParts[1].Replace(SingleQuoteSeparator, ' '), out result);
+                        }
+                        else
+                        {
+                            int.TryParse(subParts[1], out result);
+                        }
+
+                        newCNTSegment.MessageSegmentsCount = result;
+
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            return newCNTSegment;
         }
         private static LINSegment ProcessLINSegment(string stringToConvert)
         {
@@ -807,6 +953,7 @@ namespace ReadFile
 
             return newQTYSegment;
         }
+
         #endregion
     }
 }
