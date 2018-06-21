@@ -13,10 +13,13 @@ namespace ReadFile
 
         public enum EDIFactSegmentEnum
         {
+            UNA,
             UNB,
             UNH,
             BGM,
+            FTX,
             NAD,
+            CUX,
             LIN,
             PIA,
             IMD,
@@ -248,9 +251,9 @@ namespace ReadFile
 
         static void Main(string[] args)
         {
-            string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS837541.MFD");// WS843729.MFD"); 
+            string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS843729DUNNES.MFD");// WS843729.MFD"); 
             FileStatusClass fileStatus = new FileStatusClass();
-
+            EDIFact01MessageStructure theFile = new EDIFact01MessageStructure();
             if (lines.Length < 2)
             {
                 var allLines = SplitStringBySeparator(lines[0], SingleQuoteSeparator);
@@ -262,7 +265,7 @@ namespace ReadFile
                     switch (ConvertSegmentToEDIFactSegmentEnum(lineIdentifiers))
                     {
                         case EDIFactSegmentEnum.UNB:
-                            var newUNBSegment = ProcessUNBSegment(allLines[i], fileStatus);
+                            theFile.Header = ProcessUNBSegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.UNH:
                             var newUNHSegment = ProcessUNHSegment(allLines[i], fileStatus);
@@ -296,6 +299,7 @@ namespace ReadFile
                             var newUNZSegment = ProcessUNZSegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.INV:
+                            ProcessINVSegment(allLines[i], fileStatus);
                             break;
                         default:
                             break;
