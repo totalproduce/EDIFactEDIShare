@@ -53,9 +53,16 @@ namespace ReadFile
 
         public class EDIFact01MessageStructure
         {
-            public UNBSegment Header { get; set; }
-            public UNZSegment Footer { get; set; }
-            public List<EDIFact01MessageBody> LineItems { get; set; }
+            public EDIFact01MessageStructure()
+            {
+                Documents = new List<EDIFact01MessageBody>();
+            }
+
+            public UNBSegment MessageHeaderUNB { get; set; }
+
+            public List<EDIFact01MessageBody> Documents { get; set; }
+
+            public UNZSegment MessageFooterUNZ { get; set; }
         }
 
         public enum DateConvertEnum
@@ -75,7 +82,37 @@ namespace ReadFile
 
         public class EDIFact01MessageBody
         {
-            public UNHSegment BodyHeader { get; set; }
+            public EDIFact01MessageBody()
+            {
+                Lines = new List<EDIFact01MessageLines>();
+            }
+
+            public UNHSegment BodyHeaderUNH { get; set; }
+            public BGMSegment BodyBeginningofMessageBGM { get; set; }
+            public DTMSegment BodyDateAndTimeDTM { get; set; }
+            
+            //ftx
+             
+            public NADSegment BodyNameAndAddressNAD { get; set; }
+            
+            //CUX
+
+            public List<EDIFact01MessageLines> Lines { get; set; }
+
+            public UNSSegment BodySectionControlUNS { get; set; }
+
+            public CNTSegment BodyControlTotalCNT { get; set; }
+
+            public UNTSegment BodyMessageTrailerUNT { get; set; }
+        }
+
+        public class EDIFact01MessageLines
+        {
+            public LINSegment LineItemLIN { get; set; }
+            public PIASegment LineAdditionalProduceInformationPIA { get; set; }
+            public IMDSegment LineItemDescriptionIMD { get; set; }
+            public QTYSegment LineQuantityQTY { get; set; }
+
         }
 
         public class GenericSegments
@@ -254,6 +291,12 @@ namespace ReadFile
             string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS843729DUNNES.MFD");// WS843729.MFD"); 
             FileStatusClass fileStatus = new FileStatusClass();
             EDIFact01MessageStructure theFile = new EDIFact01MessageStructure();
+            theFile.Documents = new List<EDIFact01MessageBody>();
+
+            EDIFact01MessageBody theMessage = new EDIFact01MessageBody();
+            
+            EDIFact01MessageLines theLine = new EDIFact01MessageLines();
+
             if (lines.Length < 2)
             {
                 var allLines = SplitStringBySeparator(lines[0], SingleQuoteSeparator);
@@ -265,16 +308,16 @@ namespace ReadFile
                     switch (ConvertSegmentToEDIFactSegmentEnum(lineIdentifiers))
                     {
                         case EDIFactSegmentEnum.UNB:
-                            theFile.Header = ProcessUNBSegment(allLines[i], fileStatus);
+                            theFile.MessageHeaderUNB = ProcessUNBSegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.UNH:
-                            var newUNHSegment = ProcessUNHSegment(allLines[i], fileStatus);
+                            theMessage.BodyHeaderUNH = ProcessUNHSegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.BGM:
-                            var newBGMSegment = ProcessBGMSegment(allLines[i], fileStatus);
+                            theMessage.BodyBeginningofMessageBGM = ProcessBGMSegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.NAD:
-                            var newNADSegment = ProcessNADSegment(allLines[i], new NADSegment("NAD"), fileStatus);
+                            theMessage.BodyNameAndAddressNAD = ProcessNADSegment(allLines[i], new NADSegment("NAD"), fileStatus);
                             break;
                         case EDIFactSegmentEnum.LIN:
                             var newLINSegment = ProcessLINSegment(allLines[i],fileStatus);
@@ -337,28 +380,28 @@ namespace ReadFile
                     switch (thisSegment)
                     {
                         case EDIFactSegmentEnum.UNB:
-                            var newUNBSegment = ProcessUNBSegment(line, fileStatus);
+                            theFile.MessageHeaderUNB = ProcessUNBSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.UNH:
-                            var newUNHSegment = ProcessUNHSegment(line, fileStatus);
+                            theMessage.BodyHeaderUNH = ProcessUNHSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.BGM:
-                            var newBGMSegment = ProcessBGMSegment(line, fileStatus);
+                            theMessage.BodyBeginningofMessageBGM = ProcessBGMSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.NAD:
-                            var newNADSegment = ProcessNADSegment(line, new NADSegment("NAD"), fileStatus);
+                            theMessage.BodyNameAndAddressNAD = ProcessNADSegment(line, new NADSegment("NAD"), fileStatus);
                             break;
                         case EDIFactSegmentEnum.LIN:
-                            var newLINSegment = ProcessLINSegment(line, fileStatus);
+                            theLine.LineItemLIN = ProcessLINSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.PIA:
-                            var newPIASegment = ProcessPIASegment(line, fileStatus);
+                            theLine.LineAdditionalProduceInformationPIA = ProcessPIASegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.IMD:
-                            var newIMDSegment = ProcessIMDSegment(line);
+                            theLine.LineItemDescriptionIMD = ProcessIMDSegment(line);
                             break;
                         case EDIFactSegmentEnum.QTY:
-                            var newQTYSegment = ProcessQTYSegment(line, new QTYSegment("QTY"), fileStatus );
+                            theLine.LineQuantityQTY = ProcessQTYSegment(line, new QTYSegment("QTY"), fileStatus );
                             break;
                         case EDIFactSegmentEnum.UNS:
                             var newUNSSegment = ProcessUNSSegment(line);
@@ -368,6 +411,14 @@ namespace ReadFile
                             break;
                         case EDIFactSegmentEnum.UNT:
                             var newUNTSegment = ProcessUNTSegment(line, fileStatus);
+                            if (fileStatus.DocumentStarted)
+                            {
+                                //Document already started, so save the last document before clearing ready for the next one
+                                theFile.Documents.Add(theMessage);
+                                
+                                theMessage = new EDIFact01MessageBody();
+                                fileStatus.DocumentStarted = false;
+                            }
                             break;
                         case EDIFactSegmentEnum.UNZ:
                             var newUNZSegment = ProcessUNZSegment(line, fileStatus);
@@ -392,7 +443,7 @@ namespace ReadFile
                     {
                         fileStatus.TransmissionSegmentCount++;
                     }
-                    
+
                 }
             }
 
@@ -1019,10 +1070,6 @@ namespace ReadFile
             if (!fileStatus.DocumentStarted)
             {
                 throw new Exception("Message Trailer (UNT) segment found before the start of a document (UNH)");
-            }
-            else
-            {
-                fileStatus.DocumentStarted = false;
             }
 
             var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
