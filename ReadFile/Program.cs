@@ -189,12 +189,14 @@ namespace ReadFile
             public string Buyer { get; set; }
             public string DeliveryPoint { get; set; }
             public string Seller { get; set; }
+            public string Supplier { get; set; }
 
             public enum NADSegmentTypeEnum
             {
                 BY,
                 DP,
-                SE
+                SE,
+                SU
             }
         }
 
@@ -227,7 +229,7 @@ namespace ReadFile
 
         static void Main(string[] args)
         {
-            string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS837541.MFD");
+            string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS843729.MFD");// WS837541.MFD");
 
             if (lines.Length < 2)
             {
@@ -346,7 +348,7 @@ namespace ReadFile
 
             // Keep the console window open in debug mode.
             Console.WriteLine("Press any key to exit.");
-            System.Console.ReadKey();
+            Console.ReadKey();
 
         }
 
@@ -734,7 +736,11 @@ namespace ReadFile
                         var subParts = SplitStringBySeparator(allSegments[j], ColonSeparator);
 
                         newIMDSegment.DescriptionCode = subParts[0];
-                        newIMDSegment.Description = subParts[3].Replace('\'', ' ').TrimEnd();
+
+                        if (newIMDSegment.Code == "F")
+                        {
+                            newIMDSegment.Description = subParts[3].Replace('\'', ' ').TrimEnd(); 
+                        }
 
                         break;
 
@@ -932,6 +938,11 @@ namespace ReadFile
                             segmentType = NADSegment.NADSegmentTypeEnum.SE;
                         }
 
+                        if (string.Equals(allSegments[j], "SU"))
+                        {
+                            segmentType = NADSegment.NADSegmentTypeEnum.SU;
+                        }
+
                         break;
 
                     case 2:
@@ -948,6 +959,9 @@ namespace ReadFile
                                 break;
                             case NADSegment.NADSegmentTypeEnum.SE:
                                 newNADSegment.Seller = segmentDetails[0];
+                                break;
+                            case NADSegment.NADSegmentTypeEnum.SU:
+                                newNADSegment.Supplier = segmentDetails[0];
                                 break;
                             default:
                                 break;
