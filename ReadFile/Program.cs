@@ -178,6 +178,16 @@ namespace ReadFile
             public string TrailerControlReference { get; set; }
         }
 
+        public class FTXSegment : GenericSegments
+        {
+            public FTXSegment(string segmentIdentifier)
+            {
+                SegmentIdentifier = segmentIdentifier;
+            }
+            public int TrailerControlCount { get; set; }
+            public string TrailerControlReference { get; set; }
+        }
+
         public class CNTSegment : GenericSegments
         {
             public CNTSegment(string segmentIdentifier)
