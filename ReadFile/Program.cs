@@ -128,6 +128,26 @@ namespace ReadFile
             public string MessageReference { get; set; }
         }
 
+        public class UNSSegment : GenericSegments
+        {
+            public UNSSegment(string segmentIdentifier)
+            {
+                SegmentIdentifier = segmentIdentifier;
+            }
+            public char? UNS { get; set; }
+        }
+
+        public class IMDSegment : GenericSegments
+        {
+            public IMDSegment(string segmentIdentifier)
+            {
+                SegmentIdentifier = segmentIdentifier;
+            }
+            public string Code { get; set; }
+            public string DescriptionCode { get; set; }
+            public string Description { get; set; }
+        }
+
         public class PIASegment : GenericSegments
         {
             public PIASegment(string segmentIdentifier)
@@ -296,11 +316,13 @@ namespace ReadFile
                             var newPIASegment = ProcessPIASegment(line);
                             break;
                         case EDIFactSegmentEnum.IMD:
+                            var newIMDSegment = ProcessIMDSegment(line);
                             break;
                         case EDIFactSegmentEnum.QTY:
                             var newQTYSegment = ProcessQTYSegment(line, new QTYSegment("QTY"));
                             break;
                         case EDIFactSegmentEnum.UNS:
+                            var newUNSSegment = ProcessUNSSegment(line);
                             break;
                         case EDIFactSegmentEnum.CNT:
                             var newCNTSegment = ProcessCNTSegment(line);
@@ -584,7 +606,7 @@ namespace ReadFile
 
                         if (subParts[2].Contains("'"))
                         {
-                            int.TryParse(subParts[2].Replace(SingleQuoteSeparator, ' '), out result);
+                            int.TryParse(subParts[2].Replace(SingleQuoteSeparator, ' ').TrimEnd(), out result);
                         }
                         else
                         {
@@ -692,6 +714,61 @@ namespace ReadFile
 
             return newUNZSegment;
         }
+        private static IMDSegment ProcessIMDSegment(string stringToConvert)
+        {
+            var newIMDSegment = new IMDSegment("IMD");
+
+            var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
+
+            for (int j = 0; j < allSegments.Length; j++)
+            {
+                switch (j)
+                {
+                    case 1:
+
+                        newIMDSegment.Code = allSegments[j];
+                        break;
+
+                    case 3:
+
+                        var subParts = SplitStringBySeparator(allSegments[j], ColonSeparator);
+
+                        newIMDSegment.DescriptionCode = subParts[0];
+                        newIMDSegment.Description = subParts[3].Replace('\'', ' ').TrimEnd();
+
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            return newIMDSegment;
+        }
+        private static UNSSegment ProcessUNSSegment(string stringToConvert)
+        {
+            var newUNSSegment = new UNSSegment("UNS");
+
+            var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
+
+            for (int j = 0; j < allSegments.Length; j++)
+            {
+                switch (j)
+                {
+                    case 1:
+
+                        char unsChar;
+                        char.TryParse(allSegments[j].Replace(SingleQuoteSeparator, ' ').TrimEnd(), out unsChar);
+                        newUNSSegment.UNS = unsChar;
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            return newUNSSegment;
+        }
         private static PIASegment ProcessPIASegment(string stringToConvert)
         {
             var newPIASegment = new PIASegment("PIA");
@@ -739,7 +816,7 @@ namespace ReadFile
 
                         if (subParts[1].Contains("'"))
                         {
-                            int.TryParse(subParts[1].Replace(SingleQuoteSeparator, ' '), out result);
+                            int.TryParse(subParts[1].Replace(SingleQuoteSeparator, ' ').TrimEnd(), out result);
                         }
                         else
                         {
@@ -918,7 +995,7 @@ namespace ReadFile
 
                             if (segmentDetails[1].Contains("'"))
                             {
-                                decimal.TryParse(segmentDetails[1].Replace(SingleQuoteSeparator, ' '), out orderedQtyParseInt);
+                                decimal.TryParse(segmentDetails[1].Replace(SingleQuoteSeparator, ' ').TrimEnd(), out orderedQtyParseInt);
                             }
                             else
                             {
@@ -934,7 +1011,7 @@ namespace ReadFile
 
                             if (segmentDetails[1].Contains("'"))
                             {
-                                decimal.TryParse(segmentDetails[1].Replace(SingleQuoteSeparator, ' '), out consumerUnitInTradedUnitParseDecimal);
+                                decimal.TryParse(segmentDetails[1].Replace(SingleQuoteSeparator, ' ').TrimEnd(), out consumerUnitInTradedUnitParseDecimal);
                             }
                             else
                             {
