@@ -29,6 +29,25 @@ namespace ReadFile
             INV
         }
 
+        //The types of messages we can read in this upload.  This might be how we separate different sub-formats like Tesco vs Dunnes etc.
+        public enum EDIFactMessageTypeEnum
+        {
+            ORDERS,
+            UNKNOWN
+        }
+
+        public class FileStatusClass
+        {
+            public bool TransmissionStarted = false;
+            public bool DocumentStarted = false;
+            public bool LineItemStarted = false;
+            public int DocumentSegmentCount = 0;
+            public int TransmissionSegmentCount = 0;
+            public int LineCount = 0;
+            public int DocumentCount = 0;
+            public EDIFactMessageTypeEnum MessageType = EDIFactMessageTypeEnum.UNKNOWN;
+        }
+
         public class EDIFact01MessageStructure
         {
             public UNBSegment Header { get; set; }
@@ -208,6 +227,7 @@ namespace ReadFile
         static void Main(string[] args)
         {
             string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS837541.MFD");
+            FileStatusClass fileStatus = new FileStatusClass();
 
             if (lines.Length < 2)
             {
@@ -220,43 +240,56 @@ namespace ReadFile
                     switch (ConvertSegmentToEDIFactSegmentEnum(lineIdentifiers))
                     {
                         case EDIFactSegmentEnum.UNB:
-                            var newUNBSegment = ProcessUNBSegment(allLines[i]);
+                            var newUNBSegment = ProcessUNBSegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.UNH:
-                            var newUNHSegment = ProcessUNHSegment(allLines[i]);
+                            var newUNHSegment = ProcessUNHSegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.BGM:
-                            var newBGMSegment = ProcessBGMSegment(allLines[i]);
+                            var newBGMSegment = ProcessBGMSegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.NAD:
-                            var newNADSegment = ProcessNADSegment(allLines[i], new NADSegment("NAD"));
+                            var newNADSegment = ProcessNADSegment(allLines[i], new NADSegment("NAD"), fileStatus);
                             break;
                         case EDIFactSegmentEnum.LIN:
-                            var newLINSegment = ProcessLINSegment(allLines[i]);
+                            var newLINSegment = ProcessLINSegment(allLines[i],fileStatus);
                             break;
                         case EDIFactSegmentEnum.PIA:
-                            var newPIASegment = ProcessPIASegment(allLines[i]);
+                            var newPIASegment = ProcessPIASegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.IMD:
                             break;
                         case EDIFactSegmentEnum.QTY:
-                            var newQTYSegment = ProcessQTYSegment(allLines[i], new QTYSegment("QTY"));
+                            var newQTYSegment = ProcessQTYSegment(allLines[i], new QTYSegment("QTY"), fileStatus );
                             break;
                         case EDIFactSegmentEnum.UNS:
                             break;
                         case EDIFactSegmentEnum.CNT:
+                            var newCNTSegment = ProcessCNTSegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.UNT:
-                            var newUNTSegment = ProcessUNTSegment(allLines[i]);
+                            var newUNTSegment = ProcessUNTSegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.UNZ:
-                            var newUNZSegment = ProcessUNZSegment(allLines[i]);
+                            var newUNZSegment = ProcessUNZSegment(allLines[i], fileStatus);
                             break;
                         case EDIFactSegmentEnum.INV:
                             break;
                         default:
                             break;
                     }
+
+                    //Sort out segment counts
+                    if (fileStatus.DocumentStarted)
+                    {
+                        fileStatus.DocumentSegmentCount++;
+                    }
+
+                    if (fileStatus.TransmissionStarted)
+                    {
+                        fileStatus.TransmissionSegmentCount++;
+                    }
+
                 }
             }
             else
@@ -278,47 +311,60 @@ namespace ReadFile
                     switch (thisSegment)
                     {
                         case EDIFactSegmentEnum.UNB:
-                            var newUNBSegment = ProcessUNBSegment(line);
+                            var newUNBSegment = ProcessUNBSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.UNH:
-                            var newUNHSegment = ProcessUNHSegment(line);
+                            var newUNHSegment = ProcessUNHSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.BGM:
-                            var newBGMSegment = ProcessBGMSegment(line);
+                            var newBGMSegment = ProcessBGMSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.NAD:
-                            var newNADSegment = ProcessNADSegment(line, new NADSegment("NAD"));
+                            var newNADSegment = ProcessNADSegment(line, new NADSegment("NAD"), fileStatus);
                             break;
                         case EDIFactSegmentEnum.LIN:
-                            var newLINSegment = ProcessLINSegment(line);
+                            var newLINSegment = ProcessLINSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.PIA:
-                            var newPIASegment = ProcessPIASegment(line);
+                            var newPIASegment = ProcessPIASegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.IMD:
                             break;
                         case EDIFactSegmentEnum.QTY:
-                            var newQTYSegment = ProcessQTYSegment(line, new QTYSegment("QTY"));
+                            var newQTYSegment = ProcessQTYSegment(line, new QTYSegment("QTY"), fileStatus );
                             break;
                         case EDIFactSegmentEnum.UNS:
                             break;
                         case EDIFactSegmentEnum.CNT:
-                            var newCNTSegment = ProcessCNTSegment(line);
+                            var newCNTSegment = ProcessCNTSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.UNT:
-                            var newUNTSegment = ProcessUNTSegment(line);
+                            var newUNTSegment = ProcessUNTSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.UNZ:
-                            var newUNZSegment = ProcessUNZSegment(line);
+                            var newUNZSegment = ProcessUNZSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.DTM:
                             var newDTMSegment = ProcessDTMSegment(line, new DTMSegment("DTM"));
                             break;
                         case EDIFactSegmentEnum.INV:
+                            ProcessINVSegment(line, fileStatus);
                             break;
                         default:
                             break;
                     }
+
+                    //Sort out segment counts
+                    if (fileStatus.DocumentStarted)
+                    {
+                        fileStatus.DocumentSegmentCount++;
+                    }
+
+                    if (fileStatus.TransmissionStarted)
+                    {
+                        fileStatus.TransmissionSegmentCount++;
+                    }
+                    
                 }
             }
 
@@ -357,59 +403,60 @@ namespace ReadFile
                 return EDIFactSegmentEnum.INV;
             }
 
+            //Convert String to Enum
             EDIFactSegmentEnum eDIFactSegmentEnum = EDIFactSegmentEnum.INV;
-
-            switch (passInSegmentAsString)
+            try
             {
-                case "UNB":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.UNB;
-                    break;
-                case "UNH":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.UNH;
-                    break;
-                case "BGM":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.BGM;
-                    break;
-                case "NAD":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.NAD;
-                    break;
-                case "LIN":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.LIN;
-                    break;
-                case "PIA":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.PIA;
-                    break;
-                case "IMD":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.IMD;
-                    break;
-                case "QTY":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.QTY;
-                    break;
-                case "UNS":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.UNS;
-                    break;
-                case "CNT":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.CNT;
-                    break;
-                case "UNT":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.UNT;
-                    break;
-                case "DTM":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.DTM;
-                    break;
-                case "UNZ":
-                    eDIFactSegmentEnum = EDIFactSegmentEnum.UNZ;
-                    break;
-                default:
-                    break;
+                eDIFactSegmentEnum = (EDIFactSegmentEnum)Enum.Parse(typeof(EDIFactSegmentEnum), passInSegmentAsString);
+            }
+            catch (Exception)
+            {
+                eDIFactSegmentEnum = EDIFactSegmentEnum.INV;
+            }
+            
+            return eDIFactSegmentEnum;
+        }
+
+
+        public static EDIFactMessageTypeEnum ConvertMessageTypeToEDIFactMessageEnum(string passInSegmentAsString)
+        {
+            if (string.IsNullOrWhiteSpace(passInSegmentAsString))
+            {
+                return EDIFactMessageTypeEnum.UNKNOWN;
+            }
+
+            //Convert String to Enum
+            EDIFactMessageTypeEnum eDIFactSegmentEnum = EDIFactMessageTypeEnum.UNKNOWN;
+            try
+            {
+                eDIFactSegmentEnum = (EDIFactMessageTypeEnum)Enum.Parse(typeof(EDIFactMessageTypeEnum), passInSegmentAsString);
+            }
+            catch (Exception)
+            {
+                eDIFactSegmentEnum = EDIFactMessageTypeEnum.UNKNOWN;
             }
 
             return eDIFactSegmentEnum;
         }
+        
 
-        private static UNHSegment ProcessUNHSegment(string stringToConvert)
+
+        private static UNHSegment ProcessUNHSegment(string stringToConvert, FileStatusClass fileStatus )
         {
             var newUNHSegment = new UNHSegment("UNH");
+
+            if (!fileStatus.TransmissionStarted)
+            {
+                throw new Exception("New document (UNH) without a transmission header (UNB).");
+            }
+            else
+            {
+                fileStatus.DocumentStarted = true;
+                fileStatus.LineItemStarted = false;
+                fileStatus.DocumentSegmentCount = 0;
+                fileStatus.LineCount = 0;
+                fileStatus.DocumentCount++;
+            }
 
             var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
 
@@ -455,14 +502,28 @@ namespace ReadFile
                 }
             }
 
+            fileStatus.MessageType = ConvertMessageTypeToEDIFactMessageEnum(newUNHSegment.MessageType);
+
             return newUNHSegment;
         }
 
-        private static UNBSegment ProcessUNBSegment(string stringToConvert)
+        private static UNBSegment ProcessUNBSegment(string stringToConvert, FileStatusClass fileStatus)
         {
             var newUNBSegment = new UNBSegment("UNB");
             const int expectedSyntaxElementCount = 2;
             const int expectedSenderElementCount = 2;
+
+            if (fileStatus.DocumentStarted || fileStatus.LineItemStarted)
+            {
+                throw new Exception("New transmission (UNB) in the middle of a document.");
+            }
+            else
+            {
+                fileStatus.TransmissionStarted = true;
+                fileStatus.DocumentStarted = false;
+                fileStatus.LineItemStarted = false;
+                fileStatus.TransmissionSegmentCount = 0;
+            }
 
             var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
 
@@ -625,10 +686,21 @@ namespace ReadFile
             return newDTMSegment;
         }
 
-        private static BGMSegment ProcessBGMSegment(string stringToConvert)
+        private static BGMSegment ProcessBGMSegment(string stringToConvert, FileStatusClass fileStatus)
         {
             var newBGMSegment = new BGMSegment("BGM");
 
+            if (!fileStatus.TransmissionStarted || !fileStatus.DocumentStarted)
+            {
+                throw new Exception("Unexpected segment (BGM) before the document start segment (UNH).");
+            }
+           
+            if (fileStatus.LineItemStarted)
+            {
+                throw new Exception("Unexpected segment (BGM) before the end of the last document (UNT).");
+            }
+
+            
             var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
 
             for (int j = 0; j < allSegments.Length; j++)
@@ -663,9 +735,24 @@ namespace ReadFile
 
             return newBGMSegment;
         }
-        private static UNZSegment ProcessUNZSegment(string stringToConvert)
+        private static UNZSegment ProcessUNZSegment(string stringToConvert, FileStatusClass fileStatus)
         {
             var newUNZSegment = new UNZSegment("UNZ");
+
+            if (!fileStatus.TransmissionStarted)
+            {
+                throw new Exception("End of transmission segment (UNZ) before the message start segment (UNB).");
+            }
+
+            if (fileStatus.LineItemStarted)
+            {
+                throw new Exception("End of transmission segment (UNZ) before the last line has been completed in the last message (CNT segment).");
+            }
+
+            if (fileStatus.DocumentStarted)
+            {
+                throw new Exception("End of transmission segment (UNZ) before the last document has been completed (UNT segment).");
+            }
 
             var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
 
@@ -689,13 +776,23 @@ namespace ReadFile
                         break;
                 }
             }
+            
+            if (newUNZSegment.TrailerControlCount != fileStatus.DocumentCount)
+            {
+                throw new Exception("The number of documents stated in the Transmission Trailer (UNZ) segment does not match the number of documents read in the file (" + newUNZSegment.TrailerControlCount + " vs " + fileStatus.DocumentCount + ")");
+            }
 
             return newUNZSegment;
         }
-        private static PIASegment ProcessPIASegment(string stringToConvert)
+        private static PIASegment ProcessPIASegment(string stringToConvert, FileStatusClass fileStatus)
         {
             var newPIASegment = new PIASegment("PIA");
 
+            if (!fileStatus.LineItemStarted)
+            {
+                throw new Exception("Additional Product ID segment (PIA) segment found before the start of a line item (LIN)");
+            }
+            
             var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
 
             for (int j = 0; j < allSegments.Length; j++)
@@ -721,9 +818,19 @@ namespace ReadFile
 
             return newPIASegment;
         }
-        private static CNTSegment ProcessCNTSegment(string stringToConvert)
+        private static CNTSegment ProcessCNTSegment(string stringToConvert, FileStatusClass fileStatus)
         {
             var newCNTSegment = new CNTSegment("CNT");
+
+            if (!fileStatus.LineItemStarted)
+            {
+                throw new Exception("Document Count (CNT) segment found before the start of a document (UNH)");
+            }
+            else
+            {
+                fileStatus.LineItemStarted = false;
+            }
+
 
             var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
 
@@ -753,13 +860,38 @@ namespace ReadFile
                     default:
                         break;
                 }
+
+
             }
 
+           if (newCNTSegment.MessageSegmentsCount != fileStatus.LineCount)
+            {
+                throw new Exception("The number of lines stated in the Count (CNT) segment does not match the number of lines (LIN) read in the file (" + newCNTSegment.MessageSegmentsCount + " vs " + fileStatus.LineCount + ")");
+            }
+           
             return newCNTSegment;
         }
-        private static LINSegment ProcessLINSegment(string stringToConvert)
+        private static LINSegment ProcessLINSegment(string stringToConvert, FileStatusClass fileStatus)
         {
             var newLINSegment = new LINSegment("LIN");
+
+            if (!fileStatus.DocumentStarted)
+            {
+                throw new Exception("Line segment (LIN) segment found before the start of a document (UNH)");
+            }
+            else
+            {
+                if (fileStatus.LineItemStarted)
+                {
+                    fileStatus.LineCount++;
+                }
+                else
+                {
+                    fileStatus.LineItemStarted = true;
+                    fileStatus.LineCount = 1;
+                }
+                
+            }
 
             var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
 
@@ -793,9 +925,18 @@ namespace ReadFile
 
             return newLINSegment;
         }
-        private static UNTSegment ProcessUNTSegment(string stringToConvert)
+        private static UNTSegment ProcessUNTSegment(string stringToConvert, FileStatusClass fileStatus)
         {
             var newUNTSegment = new UNTSegment("UNT");
+
+            if (!fileStatus.DocumentStarted)
+            {
+                throw new Exception("Message Trailer (UNT) segment found before the start of a document (UNH)");
+            }
+            else
+            {
+                fileStatus.DocumentStarted = false;
+            }
 
             var allSegments = SplitStringBySeparator(stringToConvert, PlusSeparator);
 
@@ -820,11 +961,23 @@ namespace ReadFile
                 }
             }
 
+            //Add 1 to the Document Segement Count to include this segment
+            if (newUNTSegment.TrailerMessageSegmentsCount != (fileStatus.DocumentSegmentCount + 1))
+            {
+                throw new Exception("The number of segments stated in the message count (UNT) segment does not match the number of segments read in the message (" + newUNTSegment.TrailerMessageSegmentsCount + " vs " + fileStatus.DocumentSegmentCount + ")");
+            }
+
+
             return newUNTSegment;
         }
-        private static NADSegment ProcessNADSegment(string stringToConvert, NADSegment existingNADSegment)
+        private static NADSegment ProcessNADSegment(string stringToConvert, NADSegment existingNADSegment, FileStatusClass fileStatus)
         {
             NADSegment newNADSegment = null;
+
+            if (!fileStatus.DocumentStarted)
+            {
+                throw new Exception("Name and Address (NAD) segment found before the start of a document (UNH)");
+            }
 
             var segmentType = NADSegment.NADSegmentTypeEnum.BY;
 
@@ -885,9 +1038,14 @@ namespace ReadFile
 
             return newNADSegment;
         }
-        private static QTYSegment ProcessQTYSegment(string stringToConvert, QTYSegment existingQTYSegment)
+        private static QTYSegment ProcessQTYSegment(string stringToConvert, QTYSegment existingQTYSegment, FileStatusClass fileStatus)
         {
             QTYSegment newQTYSegment = null;
+
+            if (!fileStatus.LineItemStarted)
+            {
+                throw new Exception("Quantity (QTY) segment found before the start of a line item (LIN)");
+            }
 
             if (existingQTYSegment != null)
             {
@@ -952,6 +1110,11 @@ namespace ReadFile
             }
 
             return newQTYSegment;
+        }
+        private static void ProcessINVSegment(string stringToConvert, FileStatusClass fileStatus)
+        {
+            //Processes invalid segments
+            throw new Exception("WTF is this segment? <" + stringToConvert + ">");
         }
 
         #endregion
