@@ -248,7 +248,7 @@ namespace ReadFile
 
         static void Main(string[] args)
         {
-            string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS843729.MFD");// WS837541.MFD");
+            string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS837541.MFD");// WS843729.MFD"); 
             FileStatusClass fileStatus = new FileStatusClass();
 
             if (lines.Length < 2)
@@ -867,7 +867,7 @@ namespace ReadFile
 
             return newUNSSegment;
         }
-        private static PIASegment ProcessPIASegment(string stringToConvert)
+        private static PIASegment ProcessPIASegment(string stringToConvert, FileStatusClass fileStatus)
         {
             var newPIASegment = new PIASegment("PIA");
 
