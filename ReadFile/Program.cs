@@ -298,7 +298,7 @@ namespace ReadFile
 
         static void Main(string[] args)
         {
-            string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS843729DUNNES.MFD");// WS843729.MFD"); 
+            string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS843729.MFD"); 
             FileStatusClass fileStatus = new FileStatusClass();
             EDIFact01MessageStructure theFile = new EDIFact01MessageStructure();
             theFile.Documents = new List<EDIFact01MessageBody>();
@@ -313,62 +313,7 @@ namespace ReadFile
 
                 for (int i = 0; i < allLines.Length; i++)
                 {
-                    var lineIdentifiers = string.IsNullOrWhiteSpace(allLines[i]) ? string.Empty : allLines.Length > 0 ? allLines[i].Substring(0, 3) : allLines[i];
-
-                    switch (ConvertSegmentToEDIFactSegmentEnum(lineIdentifiers))
-                    {
-                        case EDIFactSegmentEnum.UNB:
-                            theFile.MessageHeaderUNB = ProcessUNBSegment(allLines[i], fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.UNH:
-                            theMessage.BodyHeaderUNH = ProcessUNHSegment(allLines[i], fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.BGM:
-                            theMessage.BodyBeginningofMessageBGM = ProcessBGMSegment(allLines[i], fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.NAD:
-                            theMessage.BodyNameAndAddressNAD = ProcessNADSegment(allLines[i], new NADSegment("NAD"), fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.LIN:
-                            var newLINSegment = ProcessLINSegment(allLines[i],fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.PIA:
-                            var newPIASegment = ProcessPIASegment(allLines[i], fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.IMD:
-                            break;
-                        case EDIFactSegmentEnum.QTY:
-                            var newQTYSegment = ProcessQTYSegment(allLines[i], new QTYSegment("QTY"), fileStatus );
-                            break;
-                        case EDIFactSegmentEnum.UNS:
-                            break;
-                        case EDIFactSegmentEnum.CNT:
-                            var newCNTSegment = ProcessCNTSegment(allLines[i], fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.UNT:
-                            var newUNTSegment = ProcessUNTSegment(allLines[i], fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.UNZ:
-                            var newUNZSegment = ProcessUNZSegment(allLines[i], fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.INV:
-                            ProcessINVSegment(allLines[i], fileStatus);
-                            break;
-                        default:
-                            break;
-                    }
-
-                    //Sort out segment counts
-                    if (fileStatus.DocumentStarted)
-                    {
-                        fileStatus.DocumentSegmentCount++;
-                    }
-
-                    if (fileStatus.TransmissionStarted)
-                    {
-                        fileStatus.TransmissionSegmentCount++;
-                    }
-
+                    ProcessEDILine(allLines[i], ref theFile, ref theMessage, ref theLine, ref fileStatus);
                 }
             }
             else
@@ -376,84 +321,7 @@ namespace ReadFile
                 Console.WriteLine("Contents of writeLines2.txt =:");
                 foreach (string line in lines)
                 {
-                    var lineIdentifiers = string.IsNullOrWhiteSpace(line) ? string.Empty : line.Length > 0 ? line.Substring(0, 3) : line;
-
-                    var thisSegment = ConvertSegmentToEDIFactSegmentEnum(lineIdentifiers);
-
-                    if (thisSegment == EDIFactSegmentEnum.UNB)
-                    {
-
-                    }
-
-
-
-                    switch (thisSegment)
-                    {
-                        case EDIFactSegmentEnum.UNB:
-                            theFile.MessageHeaderUNB = ProcessUNBSegment(line, fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.UNH:
-                            theMessage.BodyHeaderUNH = ProcessUNHSegment(line, fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.BGM:
-                            theMessage.BodyBeginningofMessageBGM = ProcessBGMSegment(line, fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.NAD:
-                            theMessage.BodyNameAndAddressNAD = ProcessNADSegment(line, new NADSegment("NAD"), fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.LIN:
-                            theLine.LineItemLIN = ProcessLINSegment(line, fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.PIA:
-                            theLine.LineAdditionalProduceInformationPIA = ProcessPIASegment(line, fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.IMD:
-                            theLine.LineItemDescriptionIMD = ProcessIMDSegment(line);
-                            break;
-                        case EDIFactSegmentEnum.QTY:
-                            theLine.LineQuantityQTY = ProcessQTYSegment(line, new QTYSegment("QTY"), fileStatus );
-                            break;
-                        case EDIFactSegmentEnum.UNS:
-                            var newUNSSegment = ProcessUNSSegment(line);
-                            break;
-                        case EDIFactSegmentEnum.CNT:
-                            var newCNTSegment = ProcessCNTSegment(line, fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.UNT:
-                            var newUNTSegment = ProcessUNTSegment(line, fileStatus);
-                            if (fileStatus.DocumentStarted)
-                            {
-                                //Document already started, so save the last document before clearing ready for the next one
-                                theFile.Documents.Add(theMessage);
-                                
-                                theMessage = new EDIFact01MessageBody();
-                                fileStatus.DocumentStarted = false;
-                            }
-                            break;
-                        case EDIFactSegmentEnum.UNZ:
-                            var newUNZSegment = ProcessUNZSegment(line, fileStatus);
-                            break;
-                        case EDIFactSegmentEnum.DTM:
-                            var newDTMSegment = ProcessDTMSegment(line, new DTMSegment("DTM"));
-                            break;
-                        case EDIFactSegmentEnum.INV:
-                            ProcessINVSegment(line, fileStatus);
-                            break;
-                        default:
-                            break;
-                    }
-
-                    //Sort out segment counts
-                    if (fileStatus.DocumentStarted)
-                    {
-                        fileStatus.DocumentSegmentCount++;
-                    }
-
-                    if (fileStatus.TransmissionStarted)
-                    {
-                        fileStatus.TransmissionSegmentCount++;
-                    }
-
+                    ProcessEDILine(line, ref theFile, ref theMessage, ref theLine, ref fileStatus);
                 }
             }
 
@@ -1267,6 +1135,82 @@ namespace ReadFile
         {
             //Processes invalid segments
             throw new Exception("WTF is this segment? <" + stringToConvert + ">");
+        }
+
+        private static bool ProcessEDILine(string ediLineToProcess, ref EDIFact01MessageStructure theFile, ref EDIFact01MessageBody theMessage, ref EDIFact01MessageLines theLine, ref FileStatusClass fileStatus)
+        {
+            var lineIdentifiers = string.IsNullOrWhiteSpace(ediLineToProcess) ? string.Empty : ediLineToProcess.Length > 0 ? ediLineToProcess.Substring(0, 3) : ediLineToProcess;
+
+            var thisSegment = ConvertSegmentToEDIFactSegmentEnum(lineIdentifiers);
+
+            switch (thisSegment)
+            {
+                case EDIFactSegmentEnum.UNB:
+                    theFile.MessageHeaderUNB = ProcessUNBSegment(ediLineToProcess, fileStatus);
+                    break;
+                case EDIFactSegmentEnum.UNH:
+                    theMessage.BodyHeaderUNH = ProcessUNHSegment(ediLineToProcess, fileStatus);
+                    break;
+                case EDIFactSegmentEnum.BGM:
+                    theMessage.BodyBeginningofMessageBGM = ProcessBGMSegment(ediLineToProcess, fileStatus);
+                    break;
+                case EDIFactSegmentEnum.NAD:
+                    theMessage.BodyNameAndAddressNAD = ProcessNADSegment(ediLineToProcess, new NADSegment("NAD"), fileStatus);
+                    break;
+                case EDIFactSegmentEnum.LIN:
+                    theLine.LineItemLIN = ProcessLINSegment(ediLineToProcess, fileStatus);
+                    break;
+                case EDIFactSegmentEnum.PIA:
+                    theLine.LineAdditionalProduceInformationPIA = ProcessPIASegment(ediLineToProcess, fileStatus);
+                    break;
+                case EDIFactSegmentEnum.IMD:
+                    theLine.LineItemDescriptionIMD = ProcessIMDSegment(ediLineToProcess);
+                    break;
+                case EDIFactSegmentEnum.QTY:
+                    theLine.LineQuantityQTY = ProcessQTYSegment(ediLineToProcess, new QTYSegment("QTY"), fileStatus);
+                    break;
+                case EDIFactSegmentEnum.UNS:
+                    var newUNSSegment = ProcessUNSSegment(ediLineToProcess);
+                    break;
+                case EDIFactSegmentEnum.CNT:
+                    var newCNTSegment = ProcessCNTSegment(ediLineToProcess, fileStatus);
+                    break;
+                case EDIFactSegmentEnum.UNT:
+                    var newUNTSegment = ProcessUNTSegment(ediLineToProcess, fileStatus);
+                    if (fileStatus.DocumentStarted)
+                    {
+                        //Document already started, so save the last document before clearing ready for the next one
+                        theFile.Documents.Add(theMessage);
+
+                        theMessage = new EDIFact01MessageBody();
+                        fileStatus.DocumentStarted = false;
+                    }
+                    break;
+                case EDIFactSegmentEnum.UNZ:
+                    var newUNZSegment = ProcessUNZSegment(ediLineToProcess, fileStatus);
+                    break;
+                case EDIFactSegmentEnum.DTM:
+                    var newDTMSegment = ProcessDTMSegment(ediLineToProcess, new DTMSegment("DTM"));
+                    break;
+                case EDIFactSegmentEnum.INV:
+                    ProcessINVSegment(ediLineToProcess, fileStatus);
+                    break;
+                default:
+                    break;
+            }
+
+            //Sort out segment counts
+            if (fileStatus.DocumentStarted)
+            {
+                fileStatus.DocumentSegmentCount++;
+            }
+
+            if (fileStatus.TransmissionStarted)
+            {
+                fileStatus.TransmissionSegmentCount++;
+            }
+
+            return true;
         }
 
         #endregion
