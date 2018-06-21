@@ -19,6 +19,7 @@ namespace ReadFile
             BGM,
             FTX,
             NAD,
+            LOC,
             CUX,
             LIN,
             PIA,
@@ -288,7 +289,7 @@ namespace ReadFile
 
         static void Main(string[] args)
         {
-            string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS843729DUNNES.MFD");// WS843729.MFD"); 
+            string[] lines = System.IO.File.ReadAllLines(@"C:\EDITESTS\WS837541.MFD");// WS843729.MFD WS843729DUNNES.MFD WS836601.MFD
             FileStatusClass fileStatus = new FileStatusClass();
             EDIFact01MessageStructure theFile = new EDIFact01MessageStructure();
             theFile.Documents = new List<EDIFact01MessageBody>();
@@ -296,7 +297,7 @@ namespace ReadFile
             EDIFact01MessageBody theMessage = new EDIFact01MessageBody();
             
             EDIFact01MessageLines theLine = new EDIFact01MessageLines();
-
+ 
             if (lines.Length < 2)
             {
                 var allLines = SplitStringBySeparator(lines[0], SingleQuoteSeparator);
@@ -370,13 +371,6 @@ namespace ReadFile
 
                     var thisSegment = ConvertSegmentToEDIFactSegmentEnum(lineIdentifiers);
 
-                    if (thisSegment == EDIFactSegmentEnum.UNB)
-                    {
-
-                    }
-
-
-
                     switch (thisSegment)
                     {
                         case EDIFactSegmentEnum.UNB:
@@ -388,10 +382,19 @@ namespace ReadFile
                         case EDIFactSegmentEnum.BGM:
                             theMessage.BodyBeginningofMessageBGM = ProcessBGMSegment(line, fileStatus);
                             break;
+                        case EDIFactSegmentEnum.DTM:
+                            theMessage.BodyDateAndTimeDTM = ProcessDTMSegment(line, new DTMSegment("DTM"));
+                            break;
                         case EDIFactSegmentEnum.NAD:
                             theMessage.BodyNameAndAddressNAD = ProcessNADSegment(line, new NADSegment("NAD"), fileStatus);
                             break;
                         case EDIFactSegmentEnum.LIN:
+                            if (fileStatus.LineItemStarted)
+                            {
+                                //write the previous line before starting another
+                                theMessage.Lines.Add(theLine);
+                                theLine = new EDIFact01MessageLines();
+                            }
                             theLine.LineItemLIN = ProcessLINSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.PIA:
@@ -404,28 +407,32 @@ namespace ReadFile
                             theLine.LineQuantityQTY = ProcessQTYSegment(line, new QTYSegment("QTY"), fileStatus );
                             break;
                         case EDIFactSegmentEnum.UNS:
-                            var newUNSSegment = ProcessUNSSegment(line);
+                            if (fileStatus.LineItemStarted)
+                            {
+                                //write the last line
+                                theMessage.Lines.Add(theLine);
+                                theLine = new EDIFact01MessageLines();
+                            }
+                            theMessage.BodySectionControlUNS = ProcessUNSSegment(line);
                             break;
                         case EDIFactSegmentEnum.CNT:
-                            var newCNTSegment = ProcessCNTSegment(line, fileStatus);
+                            theMessage.BodyControlTotalCNT = ProcessCNTSegment(line, fileStatus);
                             break;
                         case EDIFactSegmentEnum.UNT:
-                            var newUNTSegment = ProcessUNTSegment(line, fileStatus);
+                            theMessage.BodyMessageTrailerUNT = ProcessUNTSegment(line, fileStatus);
                             if (fileStatus.DocumentStarted)
                             {
                                 //Document already started, so save the last document before clearing ready for the next one
                                 theFile.Documents.Add(theMessage);
-                                
+
                                 theMessage = new EDIFact01MessageBody();
                                 fileStatus.DocumentStarted = false;
                             }
                             break;
                         case EDIFactSegmentEnum.UNZ:
-                            var newUNZSegment = ProcessUNZSegment(line, fileStatus);
+                            theFile.MessageFooterUNZ = ProcessUNZSegment(line, fileStatus);
                             break;
-                        case EDIFactSegmentEnum.DTM:
-                            var newDTMSegment = ProcessDTMSegment(line, new DTMSegment("DTM"));
-                            break;
+
                         case EDIFactSegmentEnum.INV:
                             ProcessINVSegment(line, fileStatus);
                             break;
