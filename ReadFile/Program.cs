@@ -1347,9 +1347,6 @@ namespace ReadFile
 
             return newPRISegment;
         }
-
-
-        //list mea segments...todo
         private static MEASegment ProcessMEASegment(string stringToConvert, MEASegment existingMEASegment, FileStatusClass fileStatus)
         {
             // //'MEA+PD+HT+CMT:18.5
@@ -1454,7 +1451,6 @@ namespace ReadFile
 
             return newMOASegment;
         }
-        //list of freetext....TODO
         private static FTXSegment ProcessFTXSegment(string stringToConvert, FTXSegment existingFTXSegment, FileStatusClass fileStatus)
         {
             ////FTX+AAB+1++30 DAYS AT 0PCT FOLLOWING MONTH OF INVOICE sample 
