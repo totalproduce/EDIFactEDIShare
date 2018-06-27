@@ -1360,8 +1360,6 @@ namespace ReadFile
                 throw new Exception("Measurements (MEA) segment found before the start of a document (UNH)");
             }
 
-            var segmentType = COMSegment.COMSegmentEnum.EM;
-
             if (existingMEASegment != null)
             {
                 newMEASegment = existingMEASegment;
@@ -1412,8 +1410,6 @@ namespace ReadFile
             {
                 throw new Exception("Monetary (MOA) segment found before the start of a document (UNH)");
             }
-
-            var segmentType = COMSegment.COMSegmentEnum.EM;
 
             if (existingMOASegment != null)
             {
@@ -1489,7 +1485,6 @@ namespace ReadFile
             }
 
             return newFTXSegment;
-            return new FTXSegment(stringToConvert);
         }
 
         private static RFFSegment ProcessRFFSegment(string stringToConvert, RFFSegment existingRFFSegment, FileStatusClass fileStatus)
