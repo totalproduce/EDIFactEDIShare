@@ -432,7 +432,7 @@ namespace ReadFile
         {
             //insert file name here! 
             //string[] lines = System.IO.File.ReadAllLines(@"i:\WS837541.MFD");// WS843729.MFD WS843729DUNNES.MFD WS836601.MFD
-            string[] lines = System.IO.File.ReadAllLines(@"C:\FreshTrade\EDITEST\WS837577MUSGRAVES.MFD");// WS843729.MFD WS843729DUNNES.MFD WS836601.MFD //sarah WS843729DUNNES.MFD //WS837577MUSGRAVES.MFD //WS837548LLOYDS.MFD
+            string[] lines = System.IO.File.ReadAllLines(@"C:\FreshTrade\EDITEST\WS837548LLOYDS.MFD");//sarah WS843729DUNNES.MFD //WS837577MUSGRAVES.MFD //WS837548LLOYDS.MFD
             FileStatusClass fileStatus = new FileStatusClass();
             EDIFact01MessageStructure theFile = new EDIFact01MessageStructure();
             theFile.Documents = new List<EDIFact01MessageBody>();
@@ -1663,7 +1663,10 @@ namespace ReadFile
                         if (refCurrencySubParts.Length >= 2)
                         {
                             newCUXSegment.CurrencyCode = refCurrencySubParts[1];
-                            newCUXSegment.InvoicingCurrency = refCurrencySubParts[2] != null ? Convert.ToInt32(refCurrencySubParts[2]) : 0;
+                            if (refCurrencySubParts.Length > 2)
+                            {
+                                newCUXSegment.InvoicingCurrency = Convert.ToInt32(refCurrencySubParts[2]);
+                            }
                         }
 
                         if (refCurrencySubParts.Length > 3)
